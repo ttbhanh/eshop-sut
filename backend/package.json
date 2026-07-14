@@ -4,12 +4,24 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js",
+    "check": "node --check server.js",
+    "test": "vitest run",
+    "test:unit": "vitest run test/unit",
+    "test:api": "vitest run test/api",
+    "test:smoke": "vitest run test/smoke",
+    "coverage": "node test/run-coverage.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
+  "devDependencies": {
+    "@vitest/coverage-v8": "^3.2.7",
+    "c8": "^10.1.3",
+    "supertest": "^7.2.2",
+    "vitest": "^3.2.7"
+  },
   "dependencies": {
     "body-parser": "^2.2.2",
     "cors": "^2.8.6",
