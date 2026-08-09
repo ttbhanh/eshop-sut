@@ -31,7 +31,7 @@ describe('POST /api/checkout', () => {
       },
       willRespondWith: {
         status: 200,
-        headers: { 'Content-Type': regex('^application/json.*', 'application/json') },
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
         body: {
           message: MatchersV3.like('Checkout successful'),
           orderId: integer(101),
@@ -73,7 +73,7 @@ describe('POST /api/checkout', () => {
       },
       willRespondWith: {
         status: 401,
-        headers: { 'Content-Type': regex('^application/json.*', 'application/json') },
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
         body: {
           error: MatchersV3.like('Unauthorized'),
         },
@@ -112,7 +112,7 @@ describe('POST /api/checkout', () => {
       },
       willRespondWith: {
         status: 403,
-        headers: { 'Content-Type': regex('^application/json.*', 'application/json') },
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
         body: {
           error: MatchersV3.like('Forbidden'),
         },
@@ -155,7 +155,7 @@ describe('POST /api/checkout', () => {
       },
       willRespondWith: {
         status: 400,
-        headers: { 'Content-Type': regex('^application/json.*', 'application/json') },
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
         body: {
           error: MatchersV3.string('Missing required fields'),
         },
@@ -198,7 +198,7 @@ describe('POST /api/checkout', () => {
       },
       willRespondWith: {
         status: 400,
-        headers: { 'Content-Type': regex('^application/json.*', 'application/json') },
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
         body: {
           error: MatchersV3.string('Missing required fields'),
         },
@@ -239,7 +239,7 @@ describe('POST /api/checkout', () => {
       },
       willRespondWith: {
         status: 400,
-        headers: { 'Content-Type': regex('^application/json.*', 'application/json') },
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
         body: {
           error: MatchersV3.string('Missing required fields'),
         },
@@ -283,7 +283,7 @@ describe('POST /api/checkout', () => {
       },
       willRespondWith: {
         status: 400,
-        headers: { 'Content-Type': regex('^application/json.*', 'application/json') },
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
         body: {
           error: MatchersV3.string('Invalid total_amount'),
         },

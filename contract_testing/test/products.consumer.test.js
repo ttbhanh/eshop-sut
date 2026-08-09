@@ -23,7 +23,7 @@ describe('GET /api/products', () => {
       },
       willRespondWith: {
         status: 200,
-        headers: { 'Content-Type': regex('^application/json.*', 'application/json') },
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
         body: eachLike({
           id: integer(1),
           name: string('iPhone 15'),
@@ -53,7 +53,7 @@ describe('GET /api/products', () => {
       },
       willRespondWith: {
         status: 200,
-        headers: { 'Content-Type': regex('^application/json.*', 'application/json') },
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
         body: eachLike({
           id: integer(1),
           name: MatchersV3.string('iPhone 15'),
@@ -81,7 +81,7 @@ describe('GET /api/products', () => {
       },
       willRespondWith: {
         status: 200,
-        headers: { 'Content-Type': regex('^application/json.*', 'application/json') },
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
         body: [],
       },
     });
@@ -104,7 +104,7 @@ describe('GET /api/products', () => {
       },
       willRespondWith: {
         status: 200,
-        headers: { 'Content-Type': regex('^application/json.*', 'application/json') },
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
         body: eachLike({
           id: integer(1),
           name: string('iPhone 15'),
@@ -131,7 +131,7 @@ describe('GET /api/products', () => {
       },
       willRespondWith: {
         status: 200,
-        headers: { 'Content-Type': regex('^application/json.*', 'application/json') },
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
         body: {
           id: integer(1),
           name: string('iPhone 15'),
@@ -158,7 +158,7 @@ describe('GET /api/products', () => {
       },
       willRespondWith: {
         status: 200,
-        headers: { 'Content-Type': regex('^application/json.*', 'application/json') },
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
         body: {
           id: integer(2),
           name: string('Samsung S24'),
@@ -185,7 +185,7 @@ describe('GET /api/products', () => {
       },
       willRespondWith: {
         status: 404,
-        headers: { 'Content-Type': regex('^application/json.*', 'application/json') },
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
         body: {
           error: MatchersV3.string('Product not found'),
         },
@@ -212,7 +212,7 @@ describe('GET /api/products', () => {
       },
       willRespondWith: {
         status: 400,
-        headers: { 'Content-Type': regex('^application/json.*', 'application/json') },
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
         body: {
           error: MatchersV3.string('Invalid ID format'),
         },

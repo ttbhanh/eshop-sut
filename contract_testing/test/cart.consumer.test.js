@@ -34,7 +34,7 @@ describe('POST /api/cart', () => {
       willRespondWith: {
         status: 200,
         headers: {
-          'Content-Type': regex('^application/json.*', 'application/json'),
+          'Content-Type': 'application/json; charset=utf-8',
         },
         body: {
           message: MatchersV3.like('Added to cart'),
@@ -67,7 +67,7 @@ describe('POST /api/cart', () => {
         method: 'POST',
         path: '/api/cart',
         headers: {
-          'Content-Type': regex('^application/json.*', 'application/json'),
+          'Content-Type': 'application/json',
         },
         body: {
           id: 1,
@@ -79,7 +79,7 @@ describe('POST /api/cart', () => {
       willRespondWith: {
         status: 401,
         headers: {
-          'Content-Type': regex('^application/json.*', 'application/json'),
+          'Content-Type': 'application/json; charset=utf-8',
         },
         body: {
           error: MatchersV3.like('Unauthorized'),
@@ -126,7 +126,7 @@ describe('POST /api/cart', () => {
       willRespondWith: {
         status: 403,
         headers: {
-          'Content-Type': regex('^application/json.*', 'application/json'),
+          'Content-Type': 'application/json; charset=utf-8',
         },
         body: {
           error: MatchersV3.like('Forbidden'),
@@ -169,7 +169,7 @@ describe('POST /api/cart', () => {
       willRespondWith: {
         status: 400,
         headers: {
-          'Content-Type': regex('^application/json.*', 'application/json'),
+          'Content-Type': 'application/json; charset=utf-8',
         },
         body: {
           error: MatchersV3.string('Missing required fields'),
@@ -214,7 +214,7 @@ describe('POST /api/cart', () => {
       willRespondWith: {
         status: 400,
         headers: {
-          'Content-Type': regex('^application/json.*', 'application/json'),
+          'Content-Type': 'application/json; charset=utf-8',
         },
         body: {
           error: MatchersV3.string('Missing required fields'),
@@ -262,7 +262,7 @@ describe('POST /api/cart', () => {
       willRespondWith: {
         status: 400,
         headers: {
-          'Content-Type': regex('^application/json.*', 'application/json'),
+          'Content-Type': 'application/json; charset=utf-8',
         },
         body: {
           error: MatchersV3.string('Invalid quantity'),

@@ -25,7 +25,7 @@ describe('POST /api/login', () => {
       },
       willRespondWith: {
         status: 200,
-        headers: { 'Content-Type': regex('^application/json.*', 'application/json') },
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
         body: {
           message: MatchersV3.like('Login successful'),
           token: MatchersV3.string('mocked-jwt-token'),
@@ -55,7 +55,7 @@ describe('POST /api/login', () => {
       },
       willRespondWith: {
         status: 401,
-        headers: { 'Content-Type': regex('^application/json.*', 'application/json') },
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
         body: {
           error: MatchersV3.like('Invalid email or password'),
         },
@@ -87,7 +87,7 @@ describe('POST /api/login', () => {
       },
       willRespondWith: {
         status: 401,
-        headers: { 'Content-Type': regex('^application/json.*', 'application/json') },
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
         body: {
           error: MatchersV3.like('Invalid email or password'),
         },
@@ -118,7 +118,7 @@ describe('POST /api/login', () => {
       },
       willRespondWith: {
         status: 400,
-        headers: { 'Content-Type': regex('^application/json.*', 'application/json') },
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
         body: {
           error: MatchersV3.string('Missing required fields'),
         },
@@ -149,7 +149,7 @@ describe('POST /api/login', () => {
       },
       willRespondWith: {
         status: 400,
-        headers: { 'Content-Type': regex('^application/json.*', 'application/json') },
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
         body: {
           error: MatchersV3.string('Missing required fields'),
         },
@@ -180,7 +180,7 @@ describe('POST /api/login', () => {
       },
       willRespondWith: {
         status: 400,
-        headers: { 'Content-Type': regex('^application/json.*', 'application/json') },
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
         body: {
           error: MatchersV3.string('Missing required fields'),
         },
@@ -209,7 +209,7 @@ describe('POST /api/login', () => {
       },
       willRespondWith: {
         status: 403,
-        headers: { 'Content-Type': regex('^application/json.*', 'application/json') },
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
         body: {
           error: MatchersV3.string('Tài khoản đã bị khóa. Vui lòng thử lại sau.'),
         },
