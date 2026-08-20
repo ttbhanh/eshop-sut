@@ -1,0 +1,2459 @@
+{
+  "info": {
+    "name": "EShop API Test Suite - HW06",
+    "description": "Fully synchronized test suite mapping 1-1 with Report.md",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.request.headers.add({",
+          "    key: 'X-Student-Id',",
+          "    value: pm.variables.get('studentId') || 'YOUR_STUDENT_ID_HERE'",
+          "});"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth Setup",
+      "item": [
+        {
+          "name": "Login Admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"admin@eshop.com\",\"password\":\"Admin123!\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json(); pm.environment.set('adminToken', jsonData.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"test@eshop.com\",\"password\":\"Test1234!\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json(); pm.environment.set('userToken', jsonData.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register & Login New User (No Orders)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"New User\",\"email\":\"newuser999@eshop.com\",\"password\":\"Test1234!\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json(); pm.environment.set('newUserToken', jsonData.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup Cart for User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/cart",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":1,\"quantity\":1}"
+            }
+          }
+        },
+        {
+          "name": "Setup Order for User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/checkout",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"shipping_address\":\"123 Test St\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.environment.set('userOrderId', jsonData.orderId);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "FR-06 Cart Data-Driven Tests (Run with FR06_Cart_DataDriven.json)",
+      "item": [
+        {
+          "name": "GET Product Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/products/{{id}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var expectedStatus = pm.iterationData.get('expectedStatus');",
+                  "if (expectedStatus === 404) {",
+                  "  pm.test(`[${pm.iterationData.get('tc_id')}] Product ${pm.iterationData.get('id')} not found`, function () { pm.response.to.have.status(404); });",
+                  "} else if (expectedStatus === 400 && pm.iterationData.get('id') === -1) {",
+                  "  pm.test(`[${pm.iterationData.get('tc_id')}] Invalid Product ID`, function () { pm.expect(pm.response.code).to.be.oneOf([400, 404]); });",
+                  "} else {",
+                  "  pm.test(`[${pm.iterationData.get('tc_id')}] Product found`, function () { pm.response.to.have.status(200); });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Add to Cart",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/cart",
+            "body": {
+              "mode": "raw",
+              "raw": "{{requestBody}}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "var body = {",
+                  "    id: pm.iterationData.get('id'),",
+                  "    quantity: pm.iterationData.get('quantity')",
+                  "};",
+                  "pm.variables.set('requestBody', JSON.stringify(body));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var expectedStatus = pm.iterationData.get('expectedStatus');",
+                  "pm.test(`[${pm.iterationData.get('tc_id')}] Status code is ${expectedStatus}`, function () { pm.response.to.have.status(expectedStatus); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "FR-11 Order Data-Driven Tests (Run with FR11_OrderHistory_DataDriven.json)",
+      "item": [
+        {
+          "name": "GET My Orders",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{tokenValue}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders/my-orders"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "var tokenVar = pm.iterationData.get('tokenVar');",
+                  "if (tokenVar === 'empty') { pm.request.headers.remove('Authorization'); }",
+                  "else if (tokenVar === 'invalid') { pm.request.headers.upsert({key: 'Authorization', value: 'Bearer invalid123'}); }",
+                  "else { pm.request.headers.upsert({key: 'Authorization', value: 'Bearer ' + pm.environment.get(tokenVar)}); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var expectedStatus = pm.iterationData.get('expectedStatus');",
+                  "pm.test(`[${pm.iterationData.get('tc_id')}] Status code is ${expectedStatus}`, function () { pm.expect(pm.response.code).to.be.oneOf([expectedStatus, 401, 403]); });",
+                  "if (expectedStatus === 200) {",
+                  "  var expectedLength = pm.iterationData.get('expectedArrayLength');",
+                  "  pm.test(`[${pm.iterationData.get('tc_id')}] Array length check`, function() {",
+                  "    var arr = pm.response.json();",
+                  "    pm.expect(arr).to.be.an('array');",
+                  "    if (expectedLength === '0') pm.expect(arr.length).to.eql(0);",
+                  "    else pm.expect(arr.length).to.be.greaterThan(0);",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "FR-14 Category Data-Driven Tests (Run with FR14_Category_DataDriven.json)",
+      "item": [
+        {
+          "name": "POST Create Category",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/categories",
+            "body": {
+              "mode": "raw",
+              "raw": "{{requestBody}}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "var body = {",
+                  "    name: pm.iterationData.get('name')",
+                  "};",
+                  "pm.variables.set('requestBody', JSON.stringify(body));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var expectedStatus = pm.iterationData.get('expectedStatus');",
+                  "pm.test(`[${pm.iterationData.get('tc_id')}] Status code is ${expectedStatus}`, function () { pm.response.to.have.status(expectedStatus); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "FR-06 Cart Standalone (ST, SEC, SCHEMA)",
+      "item": [
+        {
+          "name": "FR06-ST-01: Add first product",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/cart",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":1,\"quantity\":1}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200/201', function() { pm.expect(pm.response.code).to.be.oneOf([200, 201]); });",
+                  "pm.sendRequest({",
+                  "    url: pm.environment.get('baseUrl') + '/api/cart',",
+                  "    method: 'GET',",
+                  "    header: { 'Authorization': 'Bearer ' + pm.environment.get('userToken') }",
+                  "}, function (err, res) {",
+                  "    pm.test('Cart must contain the newly added product with status/verification', function () {",
+                  "        var cart = res.json();",
+                  "        pm.expect(cart).to.be.an('array');",
+                  "        var found = cart.find(item => item.id === 1 || item.product_id === 1);",
+                  "        pm.expect(found).to.not.be.undefined;",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR06-ST-02: Merge duplicate product",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/cart",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":1,\"quantity\":3}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200/201', function() { pm.expect(pm.response.code).to.be.oneOf([200, 201]); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR06-SEC-01: Auth required for cart",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/cart",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":1,\"quantity\":1}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 401', function() { pm.response.to.have.status(401); });",
+                  "pm.test('Response body has error property', function() { var r = pm.response.json(); pm.expect(r.error || r.message).to.be.a('string'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR06-SEC-02: Add to cart with invalid token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer invalidtoken"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/cart",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":1,\"quantity\":1}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 401 or 403', function() { pm.expect(pm.response.code).to.be.oneOf([401, 403]); });",
+                  "pm.test('Response body has error property', function() { var r = pm.response.json(); pm.expect(r.error || r.message).to.be.a('string'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR06-SEC-04: View product without auth",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/products/1"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 OK - Public endpoint', function() { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR06-SEC-05: SQLi on product ID",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/products/1 OR 1=1"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400 or 404, no SQL error in response', function() { pm.expect(pm.response.code).to.be.oneOf([400, 404]); var r = pm.response.text(); pm.expect(r).to.not.include('SQL syntax'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR06-SEC-06: XSS in cart product name",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/cart",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":1,\"name\":\"<script>alert('XSS')</script>\",\"price\":100,\"quantity\":1}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('API accepts payload (200/201)', function() { pm.expect(pm.response.code).to.be.oneOf([200, 201]); });",
+                  "pm.sendRequest({",
+                  "    url: pm.environment.get('baseUrl') + '/api/cart',",
+                  "    method: 'GET',",
+                  "    header: { 'Authorization': 'Bearer ' + pm.environment.get('userToken') }",
+                  "}, function (err, res) {",
+                  "    pm.test('XSS string stored unsanitized', function () {",
+                  "        var cart = res.json();",
+                  "        var found = cart.find(item => item.name === \"<script>alert('XSS')</script>\");",
+                  "        pm.expect(found).to.not.be.undefined;",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR06-SEC-07: Cart isolation",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/cart"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function() { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR06-SCHEMA-01,02,03: Product Schema",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/products/1"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Schema verification', function() {",
+                  "  var p = pm.response.json();",
+                  "  pm.expect(p.id).to.be.a('number');",
+                  "  pm.expect(p.name).to.be.a('string').and.to.have.lengthOf.at.least(1);",
+                  "  pm.expect(p.price).to.be.a('number').and.to.be.above(0);",
+                  "  pm.expect(p.description).to.be.a('string');",
+                  "  pm.expect(p.imageUrl).to.be.a('string');",
+                  "  pm.expect(p.category_id).to.be.a('number');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR06-SCHEMA-05: Non-existent product response shape",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/products/9999"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status exactly 404', function() { pm.response.to.have.status(404); });",
+                  "pm.test('Response contains error string', function() { var r = pm.response.json(); pm.expect(r.error).to.be.a('string'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR06-SEC-03: Add to cart with expired JWT token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZXhwIjoxNTE2MjM5MDIyfQ.invalid_signature_or_expired"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/cart",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":1,\"quantity\":1}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 401 or 403', function() { pm.expect(pm.response.code).to.be.oneOf([401, 403]); });",
+                  "pm.test('Response body has error property', function() { var r = pm.response.json(); pm.expect(r.error || r.message).to.be.a('string'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR06-SCHEMA-04: Even-ID price type regression",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/products/2"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 OK', function() { pm.response.to.have.status(200); });",
+                  "pm.test('Price should be integer', function() { var r = pm.response.json(); pm.expect(r.price).to.be.a('number'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR06-SCHEMA-06: POST /api/cart response shape",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/cart",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":1,\"quantity\":2}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Response has message string', function() { var r = pm.response.json(); pm.expect(r.message).to.be.a('string'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR06-SCHEMA-07: GET /api/cart response shape",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/cart"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Response is JSON array', function() {",
+                  "  var r = pm.response.json();",
+                  "  pm.expect(r).to.be.an('array');",
+                  "  if (r.length > 0) {",
+                  "    pm.expect(r[0].id || r[0].product_id).to.be.a('number');",
+                  "    pm.expect(r[0].name).to.be.a('string');",
+                  "    pm.expect(r[0].price).to.be.a('number');",
+                  "    pm.expect(r[0].quantity).to.be.a('number');",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR06-SEC-08: PUT Method Not Allowed",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/cart"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 404 or 405', function() { pm.expect(pm.response.code).to.be.oneOf([404, 405]); });",
+                  "pm.test('Response body has error property', function() { var r = pm.response.json(); pm.expect(r.error || r.message).to.be.a('string'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR06-SEC-09: DELETE Method Not Allowed",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/cart"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 404 or 405', function() { pm.expect(pm.response.code).to.be.oneOf([404, 405]); });",
+                  "pm.test('Response body has error property', function() { var r = pm.response.json(); pm.expect(r.error || r.message).to.be.a('string'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR06-SCHEMA-08: Invalid Content-Type text/plain",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "text/plain"
+              }
+            ],
+            "url": "{{baseUrl}}/api/cart",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":1,\"quantity\":2}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400 or 415', function() { pm.expect(pm.response.code).to.be.oneOf([400, 415]); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR06-SCHEMA-09: Missing Content-Type",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/cart",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":1,\"quantity\":2}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400 or 415', function() { pm.expect(pm.response.code).to.be.oneOf([400, 415]); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR06-SEC-10: SQL Injection in quantity field",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/cart",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":1,\"quantity\":\"1; DROP TABLE carts;\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400', function() { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR06-BVA-08: Extremely large quantity",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/cart",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":1,\"quantity\":999999999}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400', function() { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "FR-11 Order Standalone (ST, SEC, SCHEMA)",
+      "item": [
+        {
+          "name": "FR11-ST-01,02: Order reflection & State reflection",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders/my-orders"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function() { pm.response.to.have.status(200); });",
+                  "pm.test('Orders reflect correct state format as specified in FR11-ST-01/02', function() {",
+                  "    var orders = pm.response.json();",
+                  "    pm.expect(orders).to.be.an('array');",
+                  "    if(orders.length > 0) {",
+                  "        var statuses = ['pending', 'confirmed', 'shipping', 'delivered', 'canceled'];",
+                  "        orders.forEach(function(order) {",
+                  "            pm.expect(statuses).to.include(order.status);",
+                  "        });",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR11-SEC-01: IDOR - No other users orders",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders/my-orders"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function() { pm.response.to.have.status(200); });",
+                  "pm.test('Response ONLY contains orders of the logged-in user', function () {",
+                  "    var token = pm.environment.get('userToken');",
+                  "    var base64Url = token.split('.')[1];",
+                  "    var base64 = base64Url.replace(/-/g, '+').replace(/_/, '/');",
+                  "    var jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {",
+                  "        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);",
+                  "    }).join(''));",
+                  "    var decoded = JSON.parse(jsonPayload);",
+                  "    var userId = decoded.id || decoded.userId || decoded.user_id;",
+                  "    var orders = pm.response.json();",
+                  "    pm.expect(orders).to.be.an('array');",
+                  "    orders.forEach(function(order) {",
+                  "        pm.expect(order.user_id).to.eql(userId);",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR11-SEC-02: Access order history without token",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/orders/my-orders"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 401', function() { pm.response.to.have.status(401); });",
+                  "pm.test('Response body has error property', function() { var r = pm.response.json(); pm.expect(r.error || r.message).to.be.a('string'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR11-SEC-03: Access order history with invalid token",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer invalid123"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders/my-orders"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 401/403', function() { pm.expect(pm.response.code).to.be.oneOf([401, 403]); });",
+                  "pm.test('Response body has error property', function() { var r = pm.response.json(); pm.expect(r.error || r.message).to.be.a('string'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR11-SEC-04: Access with malformed Authorization header",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "invalid_format_no_bearer"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders/my-orders"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 401', function() { pm.response.to.have.status(401); });",
+                  "pm.test('Response body has error property', function() { var r = pm.response.json(); pm.expect(r.error || r.message).to.be.a('string'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR11-SEC-05: IDOR on specific order GET /api/orders/1",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{newUserToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders/1"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Should enforce authorization 403/404', function() { pm.expect(pm.response.code).to.be.oneOf([403, 404, 401]); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR11-SCHEMA-01,02,03,04: Orders Schema Validation",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders/my-orders"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Schema checks', function() {",
+                  "  var arr = pm.response.json();",
+                  "  pm.expect(arr).to.be.an('array');",
+                  "  var statuses = ['pending', 'confirmed', 'shipping', 'delivered', 'canceled'];",
+                  "  arr.forEach(function(o) {",
+                  "    pm.expect(o.id).to.be.a('number');",
+                  "    pm.expect(o.user_id).to.be.a('number');",
+                  "    pm.expect(o.total_amount).to.be.a('number').and.to.be.at.least(0);",
+                  "    pm.expect(statuses).to.include(o.status);",
+                  "    if (o.shipping_address !== null) pm.expect(o.shipping_address).to.be.a('string');",
+                  "    pm.expect(o.created_at).to.be.a('string');",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR11-SEC-06: Token Tampering",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6OTk5OSwibmFtZSI6IkhhY2tlciIsImVtYWlsIjoiaGFja2VyQGVzaG9wLmNvbSJ9.tampered_signature"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders/my-orders"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Tampered token should be rejected (401/403)', function() { pm.expect(pm.response.code).to.be.oneOf([401, 403]); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR11-SCHEMA-06: Error Response Shape",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/orders/my-orders"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Response has error string', function() { var r = pm.response.json(); pm.expect(r.error).to.be.a('string'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR11-SCHEMA-05: Empty state",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{newUserToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders/my-orders"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 and Empty Array', function() {",
+                  "  pm.response.to.have.status(200);",
+                  "  var arr = pm.response.json();",
+                  "  pm.expect(arr).to.be.an('array').that.is.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR11-SEC-07: POST Method Not Allowed",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders/my-orders"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 404 or 405', function() { pm.expect(pm.response.code).to.be.oneOf([404, 405]); });",
+                  "pm.test('Response body has error property', function() { var r = pm.response.json(); pm.expect(r.error || r.message).to.be.a('string'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR11-SEC-08: PUT Method Not Allowed",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders/my-orders"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 404 or 405', function() { pm.expect(pm.response.code).to.be.oneOf([404, 405]); });",
+                  "pm.test('Response body has error property', function() { var r = pm.response.json(); pm.expect(r.error || r.message).to.be.a('string'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR11-SEC-09: DELETE Method Not Allowed",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders/my-orders"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 404 or 405', function() { pm.expect(pm.response.code).to.be.oneOf([404, 405]); });",
+                  "pm.test('Response body has error property', function() { var r = pm.response.json(); pm.expect(r.error || r.message).to.be.a('string'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR11-SEC-10: IDOR bypass attempt ?user_id=2",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders/my-orders?user_id=2"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function() { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR11-SEC-11: IDOR bypass attempt ?id=99",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders/my-orders?id=99"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function() { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR11-SEC-12: SQLi in User-Agent",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              },
+              {
+                "key": "User-Agent",
+                "value": "' OR 1=1--"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders/my-orders"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function() { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR11-SEC-13: XSS in User-Agent",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              },
+              {
+                "key": "User-Agent",
+                "value": "<script>alert(1)</script>"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders/my-orders"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function() { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR11-SEC-14: JWT alg:none attack",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer eyJhbGciOiJub25lIn0.eyJ1c2VyX2lkIjoxLCJyb2xlIjoidXNlciJ9."
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders/my-orders"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 401 or 403', function() { pm.expect(pm.response.code).to.be.oneOf([401, 403]); });",
+                  "pm.test('Response body has error property', function() { var r = pm.response.json(); pm.expect(r.error || r.message).to.be.a('string'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR11-SEC-15: JWT missing signature",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxLCJyb2xlIjoidXNlciJ9."
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders/my-orders"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 401 or 403', function() { pm.expect(pm.response.code).to.be.oneOf([401, 403]); });",
+                  "pm.test('Response body has error property', function() { var r = pm.response.json(); pm.expect(r.error || r.message).to.be.a('string'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR11-SEC-16: Expired Token",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{expiredToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders/my-orders"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 401 or 403', function() { pm.expect(pm.response.code).to.be.oneOf([401, 403]); });",
+                  "pm.test('Response body has error property', function() { var r = pm.response.json(); pm.expect(r.error || r.message).to.be.a('string'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR11-SEC-17: Token future nbf",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{futureToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders/my-orders"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 401 or 403', function() { pm.expect(pm.response.code).to.be.oneOf([401, 403]); });",
+                  "pm.test('Response body has error property', function() { var r = pm.response.json(); pm.expect(r.error || r.message).to.be.a('string'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR11-SEC-18: Path Traversal",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders/../orders/my-orders"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 or 404', function() { pm.expect(pm.response.code).to.be.oneOf([200, 404]); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR11-SEC-19: OPTIONS Request",
+          "request": {
+            "method": "OPTIONS",
+            "header": [],
+            "url": "{{baseUrl}}/api/orders/my-orders"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 or 204', function() { pm.expect(pm.response.code).to.be.oneOf([200, 204]); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR11-SCHEMA-07: Send JSON Body with GET",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders/my-orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"some\":\"body\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function() { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR11-SCHEMA-08: Pagination ignored",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders/my-orders?page=1&limit=10"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function() { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR11-SCHEMA-09: Accept text/html",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              },
+              {
+                "key": "Accept",
+                "value": "text/html"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders/my-orders"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 or 406', function() { pm.expect(pm.response.code).to.be.oneOf([200, 406]); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR11-SCHEMA-10: Authorization with extra spaces",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer    {{userToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders/my-orders"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function() { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "FR-14 Category Standalone (ST, SEC, SCHEMA)",
+      "item": [
+        {
+          "name": "FR14-ST-01: Create Category",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/categories",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"TestCategoryST\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200/201', function() { pm.expect(pm.response.code).to.be.oneOf([200, 201]); var r = pm.response.json(); pm.environment.set('createdCategoryId', r.id || r.categoryId); });",
+                  "pm.sendRequest({",
+                  "    url: pm.environment.get('baseUrl') + '/api/categories',",
+                  "    method: 'GET'",
+                  "}, function (err, res) {",
+                  "    pm.test('Created category appears in GET list', function () {",
+                  "        var categories = res.json();",
+                  "        var createdId = pm.environment.get('createdCategoryId');",
+                  "        var found = categories.find(c => c.id === createdId);",
+                  "        pm.expect(found).to.not.be.undefined;",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR14-ST-02: Delete Category",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/categories/{{createdCategoryId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200/204', function() { pm.expect(pm.response.code).to.be.oneOf([200, 204]); });",
+                  "pm.sendRequest({",
+                  "    url: pm.environment.get('baseUrl') + '/api/categories',",
+                  "    method: 'GET'",
+                  "}, function (err, res) {",
+                  "    pm.test('Category MUST NOT exist in the list anymore', function () {",
+                  "        var categories = res.json();",
+                  "        var deletedId = parseInt(pm.environment.get('createdCategoryId'), 10);",
+                  "        var found = categories.find(c => c.id === deletedId);",
+                  "        pm.expect(found).to.be.undefined;",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR14-ST-03: Double Delete Category",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/categories/{{createdCategoryId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 404', function() { pm.response.to.have.status(404); });",
+                  "pm.test('Response has error message', function() { var r = pm.response.json(); pm.expect(r.error || r.message).to.be.a('string'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR14-ST-04: Update Category",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/categories/{{createdCategoryId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"Updated Name\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function() { pm.response.to.have.status(200); });",
+                  "pm.sendRequest({",
+                  "    url: pm.environment.get('baseUrl') + '/api/categories',",
+                  "    method: 'GET'",
+                  "}, function (err, res) {",
+                  "    pm.test('Updated category name appears in GET list', function () {",
+                  "        var categories = res.json();",
+                  "        var updatedId = parseInt(pm.environment.get('createdCategoryId'), 10);",
+                  "        var found = categories.find(c => c.id === updatedId);",
+                  "        pm.expect(found.name).to.eql('Updated Name');",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR14-SEC-01: Create Category Non-Admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/categories",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"Hacked Category\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 401/403', function() { pm.expect(pm.response.code).to.be.oneOf([401, 403]); });",
+                  "pm.test('Response body has error property', function() { var r = pm.response.json(); pm.expect(r.error || r.message).to.be.a('string'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR14-SEC-02: Delete Category Non-Admin",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/categories/1"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 401/403', function() { pm.expect(pm.response.code).to.be.oneOf([401, 403]); });",
+                  "pm.test('Response body has error property', function() { var r = pm.response.json(); pm.expect(r.error || r.message).to.be.a('string'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR14-SEC-03: GET categories is Public",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/categories"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 200 OK without token', function() { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR14-SEC-04: Create category without token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/categories",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"Test\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 401', function() { pm.response.to.have.status(401); });",
+                  "pm.test('Response body has error property', function() { var r = pm.response.json(); pm.expect(r.error || r.message).to.be.a('string'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR14-SEC-05: Delete category without token",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/categories/1"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 401', function() { pm.response.to.have.status(401); });",
+                  "pm.test('Response body has error property', function() { var r = pm.response.json(); pm.expect(r.error || r.message).to.be.a('string'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR14-SCHEMA-01,02,03: GET Categories Schema",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/categories"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Schema Validation', function() {",
+                  "  var r = pm.response.json();",
+                  "  pm.expect(r).to.be.an('array');",
+                  "  r.forEach(function(c) {",
+                  "    pm.expect(c.id).to.be.a('number').and.to.be.above(0);",
+                  "    pm.expect(c.name).to.be.a('string').and.to.have.lengthOf.at.least(1);",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR14-SEC-06: Create category with invalid token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer badtoken"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/categories",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"Test\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 401/403', function() { pm.expect(pm.response.code).to.be.oneOf([401, 403]); });",
+                  "pm.test('Response body has error property', function() { var r = pm.response.json(); pm.expect(r.error || r.message).to.be.a('string'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR14-SEC-07: Injection (XSS)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/categories",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"<img src=x onerror=alert('XSS')>\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function() { pm.expect(pm.response.code).to.be.oneOf([200, 201]); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR14-SEC-08: Injection (SQLi) name",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/categories",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"Test'; DROP TABLE categories;--\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Should not execute SQL syntax errors or crash', function() { pm.expect(pm.response.code).to.not.equal(500); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR14-SEC-09: Injection (SQLi) id",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/categories/1;DROP TABLE categories"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 400 or 404', function() { pm.expect(pm.response.code).to.be.oneOf([400, 404]); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR14-SCHEMA-06: DELETE Success Response",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/categories/99999"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('DELETE format check (even if 404)', function() { var r = pm.response.json(); if(pm.response.code === 200) { pm.expect(r.message).to.be.a('string'); } else { pm.expect(r.error).to.be.a('string'); }});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR14-SCHEMA-07: POST Error Response 500",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/categories",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"invalid_schema\":\"error\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Error response has error field', function() { if (pm.response.code >= 400) { var r = pm.response.json(); pm.expect(r.error || r.message).to.be.a('string'); } });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR14-SCHEMA-08: GET empty list",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/categories?empty_mock=true"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns array', function() { var r = pm.response.json(); pm.expect(r).to.be.an('array'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR14-SCHEMA-09: POST null name",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/categories",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":null}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('400 error', function() { pm.expect(pm.response.code).to.equal(400); });",
+                  "pm.test('Has error string', function() { var r = pm.response.json(); pm.expect(r.error).to.be.a('string'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR14-SCHEMA-04,05: POST Success Response Schema",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/categories",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"SchemaTestPost\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('POST Response Shape', function() {",
+                  "  var r = pm.response.json();",
+                  "  pm.expect(r.message).to.be.a('string');",
+                  "  pm.expect(r.id || r.categoryId).to.be.a('number').and.to.be.above(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR14-BVA-08: Category name whitespace",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/categories",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"   \"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400', function() { pm.response.to.have.status(400); });",
+                  "pm.test('Response body has error property', function() { var r = pm.response.json(); pm.expect(r.error || r.message).to.be.a('string'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR14-SEC-10: PUT Method Not Allowed",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/categories"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 404 or 405', function() { pm.expect(pm.response.code).to.be.oneOf([404, 405]); });",
+                  "pm.test('Response body has error property', function() { var r = pm.response.json(); pm.expect(r.error || r.message).to.be.a('string'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR14-SEC-11: Update Category Non-Admin",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/categories/1",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"Hacked Category\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 401/403', function() { pm.expect(pm.response.code).to.be.oneOf([401, 403]); });",
+                  "pm.test('Response body has error property', function() { var r = pm.response.json(); pm.expect(r.error || r.message).to.be.a('string'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR14-SEC-12: Update Category without token",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/categories/1",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"Hacked Category\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 401', function() { pm.response.to.have.status(401); });",
+                  "pm.test('Response body has error property', function() { var r = pm.response.json(); pm.expect(r.error || r.message).to.be.a('string'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR14-SCHEMA-10: PUT Success Response Shape",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/categories/{{createdCategoryId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"SchemaUpdateTest\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('PUT format check', function() { var r = pm.response.json(); pm.expect(r.message).to.be.a('string'); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "CI - All Pass",
+      "item": [
+        {
+          "name": "CI-PASS-01: Public products endpoint",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/products"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function() { pm.response.to.have.status(200); });",
+                  "pm.test('Response is an array', function() { pm.expect(pm.response.json()).to.be.an('array'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CI-PASS-02: Login admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"admin@eshop.com\",\"password\":\"Admin123!\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function() { pm.response.to.have.status(200); });",
+                  "pm.test('Token exists', function() { var r = pm.response.json(); pm.expect(r.token).to.be.a('string').and.to.have.lengthOf.at.least(10); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CI-PASS-03: Login user",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"test@eshop.com\",\"password\":\"Test1234!\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function() { pm.response.to.have.status(200); });",
+                  "pm.test('Token exists', function() { var r = pm.response.json(); pm.expect(r.token).to.be.a('string').and.to.have.lengthOf.at.least(10); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CI-PASS-04: Public categories endpoint",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/categories"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function() { pm.response.to.have.status(200); });",
+                  "pm.test('Response is an array', function() { pm.expect(pm.response.json()).to.be.an('array'); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Extension: Advanced Test Cases",
+      "item": [
+        {
+          "name": "EXT-02: Mass Assignment Override",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/cart",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\": 1, \"quantity\": 1, \"price\": 0, \"role\": \"admin\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function() { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "EXT-03: DOS Pagination via massive limit",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders/my-orders?limit=100000000"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Should not crash (Status is not 500)', function() { pm.expect(pm.response.code).to.not.equal(500); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "EXT-04: DOS Payload Size Limits",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/categories",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"{{$randomLoremParagraphs}}{{$randomLoremParagraphs}}{{$randomLoremParagraphs}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status should be 413 or 400', function() { pm.expect(pm.response.code).to.be.oneOf([413, 400]); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

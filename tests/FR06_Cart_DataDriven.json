@@ -1,0 +1,16 @@
+[
+  { "tc_id": "FR06-DOM-01", "id": 1, "quantity": 2, "expectedStatus": 200 },
+  { "tc_id": "FR06-DOM-02", "id": 9999, "quantity": 2, "expectedStatus": 404 },
+  { "tc_id": "FR06-DOM-03", "id": -1, "quantity": 2, "expectedStatus": 400 },
+  { "tc_id": "FR06-DOM-04", "id": 1, "quantity": 0, "expectedStatus": 400 },
+  { "tc_id": "FR06-DOM-05", "id": 1, "quantity": 100, "expectedStatus": 400 },
+  { "tc_id": "FR06-DOM-06", "id": 1, "quantity": "abc", "expectedStatus": 400 },
+  { "tc_id": "FR06-BVA-01", "id": 1, "quantity": 0, "expectedStatus": 400 },
+  { "tc_id": "FR06-BVA-02", "id": 1, "quantity": 1, "expectedStatus": 200 },
+  { "tc_id": "FR06-BVA-03", "id": 1, "quantity": 2, "expectedStatus": 200 },
+  { "tc_id": "FR06-BVA-04", "id": 1, "quantity": 50, "expectedStatus": 200 },
+  { "tc_id": "FR06-BVA-05", "id": 1, "quantity": 98, "expectedStatus": 200 },
+  { "tc_id": "FR06-BVA-06", "id": 1, "quantity": 99, "expectedStatus": 200 },
+  { "tc_id": "FR06-BVA-07", "id": 1, "quantity": 100, "expectedStatus": 400 },
+  { "tc_id": "FR06-DP-01", "id": 9999, "quantity": 1, "expectedStatus": 404 }
+]

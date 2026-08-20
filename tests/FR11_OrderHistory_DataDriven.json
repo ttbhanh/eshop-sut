@@ -1,0 +1,6 @@
+[
+  { "tc_id": "FR11-DOM-01", "tokenVar": "userToken", "expectedStatus": 200, "expectedArrayLength": ">0" },
+  { "tc_id": "FR11-DOM-02", "tokenVar": "newUserToken", "expectedStatus": 200, "expectedArrayLength": "0" },
+  { "tc_id": "FR11-DOM-03", "tokenVar": "empty", "expectedStatus": 401, "expectedArrayLength": "N/A" },
+  { "tc_id": "FR11-DOM-04", "tokenVar": "invalid", "expectedStatus": 403, "expectedArrayLength": "N/A" }
+]

@@ -1,115 +1,75 @@
-name: CI
+name: API Tests CI
 
 on:
   push:
-    branches:
-      - main
-      - master
+    branches: [ "main", "master", "feature/**", "hw06" ]
   pull_request:
-    branches:
-      - main
-      - master
+    branches: [ "main", "master" ]
+  workflow_dispatch:
 
 jobs:
-  backend-tests:
-    name: Backend unit, API, and smoke tests
+  test-api:
     runs-on: ubuntu-latest
-
-    defaults:
-      run:
-        working-directory: backend
+    permissions:
+      contents: read
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-          cache-dependency-path: backend/package-lock.json
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: "18"
 
-      - name: Install dependencies
-        run: npm ci
+    - name: Install Newman & HTML Extra Reporter
+      run: npm install --global newman newman-reporter-htmlextra
 
-      - name: Run backend tests
-        run: npm test
+    - name: Install backend dependencies
+      working-directory: ./backend
+      run: npm ci
 
-  frontend-web:
-    name: Frontend Web
-    runs-on: ubuntu-latest
+    - name: Create Reports Directory
+      run: mkdir -p tests/reports
 
-    defaults:
-      run:
-        working-directory: frontend-web
+    - name: Start backend server
+      working-directory: ./backend
+      run: node server.js > ../tests/reports/server.log 2>&1 &
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    - name: Wait for server to be ready
+      run: |
+        for attempt in {1..30}; do
+          if curl --fail --silent http://localhost:3000/api/products > /dev/null; then
+            echo "Backend is ready after ${attempt} attempt(s)."
+            exit 0
+          fi
+          sleep 1
+        done
+        echo "Backend did not become ready in 30 seconds."
+        cat tests/reports/server.log
+        exit 1
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-          cache-dependency-path: frontend-web/package-lock.json
+    - name: Run Newman All-Pass Suite
+      run: >-
+        newman run tests/EShop_API_Test_Suite.postman_collection.json -e tests/EShop_Environment.postman_environment.json --folder "CI - All Pass" -r cli,htmlextra --reporter-htmlextra-export tests/reports/ci-all-pass.html
 
-      - name: Install dependencies
-        run: npm ci
+    - name: Upload Test Reports
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: API-Test-Reports
+        path: |
+          tests/reports/*.html
+          tests/reports/server.log
+        if-no-files-found: warn
 
-      - name: Lint
-        run: npm run lint
-
-      - name: Build
-        run: npm run build
-
-  frontend-admin:
-    name: Frontend Admin
-    runs-on: ubuntu-latest
-
-    defaults:
-      run:
-        working-directory: frontend-admin
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-          cache-dependency-path: frontend-admin/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Build
-        run: npm run build
-
-  mobile-deps:
-    name: Mobile dependency check
-    runs-on: ubuntu-latest
-
-    defaults:
-      run:
-        working-directory: frontend-mobile
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-          cache-dependency-path: frontend-mobile/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci
+    - name: Publish CI summary
+      if: always()
+      run: |
+        {
+          echo "## Newman API test run"
+          echo ""
+          echo "- Commit: `${GITHUB_SHA}`"
+          echo "- Workflow run: [${GITHUB_RUN_ID}](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})"
+          echo "- HTML reports: download the `API-Test-Reports` artifact above."
+        } >> "$GITHUB_STEP_SUMMARY"
